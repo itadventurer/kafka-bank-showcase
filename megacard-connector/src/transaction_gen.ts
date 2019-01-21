@@ -27,13 +27,17 @@ const purposes = [
     'Donuts'
 ];
 
-export function gen_transaction(start_time=Date.now(), customers = example_customers) {
+export function gen_transactions(start_time=Date.now(), customers = example_customers) {
     const cardid = gen_utils.take_random(customers);
-    return {
+    const events = new Array();
+    for(var i = 0; i < gen_utils.random_int_between(1,5); i++) {
+        events.push({
         cardid: cardid,
         has_cvc: gen_utils.random_boolean(),
         amount: gen_utils.random_between(100,1000),
         purpose: gen_utils.take_random(purposes),
         timestamp: gen_utils.random_date_between(moment().add(-5, 'days'))
-    };
+        });
+    }
+    return events;
 }
