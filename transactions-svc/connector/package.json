@@ -1,0 +1,29 @@
+{
+    "name": "kafka-showcase-transactions-svc-connector",
+    "version": "1.0.0",
+    "main": "index.js",
+    "author": "Anatoly Zelenin",
+    "license": "MIT",
+    "dependencies": {
+        "debug": "^4.0.1",
+        "express": "^4.16.3",
+        "node-rdkafka": "^2.4.2",
+        "lodash": "^4.17.11",
+        "moment": "^2.22.2",
+        "pg": "^7.4.3",
+        "squel": "^5.12.2",
+        "wait-for-kafka": "^1.0.6",
+        "wait-for-pg-db": "^1.0.3"
+    },
+    "scripts": {
+        "start": "./node_modules/.bin/ts-node ./src/index.ts",
+        "build:live": "nodemon --exec ./node_modules/.bin/ts-node -- ./src/index.ts"
+    },
+    "devDependencies": {
+        "@types/express": "^4.16.0",
+        "@types/node": "^10.9.4",
+        "nodemon": "^1.18.4",
+        "ts-node": "^7.0.1",
+        "typescript": "^3.0.3"
+    }
+}
