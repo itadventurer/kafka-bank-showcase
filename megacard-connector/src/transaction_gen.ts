@@ -32,11 +32,15 @@ export function gen_transactions(start_time=Date.now(), customers = example_cust
     const events = new Array();
     for(var i = 0; i < gen_utils.random_int_between(1,5); i++) {
         events.push({
-        cardid: cardid,
-        has_cvc: gen_utils.random_boolean(),
-        amount: gen_utils.random_between(100,1000),
-        purpose: gen_utils.take_random(purposes),
-        timestamp: gen_utils.random_date_between(moment().add(-5, 'days'))
+            event: "transaction",
+            cardid: cardid,
+            payload: {
+                has_cvc: gen_utils.random_boolean(),
+                amount: gen_utils.random_between(100,1000),
+                purpose: gen_utils.take_random(purposes)
+            },
+            timestamp: gen_utils.random_date_between(moment().add(-5, 'days')),
+            msg_id: gen_utils.session_id_gen()
         });
     }
     return events;

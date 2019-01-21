@@ -38,7 +38,7 @@ function update_card(cards) {
         }
     } else {
         card.limit = gen_utils.random_int_between(1000,5000);
-        return {event: "unblock_card",
+        return {event: "update_card_limit",
                 cardid: card.cardid,
                 payload: card.limit,
                 timestamp: card.last_event,
