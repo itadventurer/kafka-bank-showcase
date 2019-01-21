@@ -1,5 +1,5 @@
 // Produce Messages
-import {gen_transaction} from './transaction_gen';
+import {gen_transactions} from './transaction_gen';
 import {gen_card_events} from './card_gen';
 import kafka_utils from './kafka_utils';
 // Web Server
