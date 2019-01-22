@@ -1,0 +1,168 @@
+---
+version: '2'
+services:
+  entry:
+    image: nginx:alpine
+    volumes:
+      - ./entry:/usr/share/nginx/html
+    ports:
+      - "8080:80"
+  zookeeper:
+    image: azapps/cp-zookeeper:latest
+    hostname: zookeeper
+    container_name: zookeeper
+    ports:
+      - "2181:2181"
+    environment:
+      ZOOKEEPER_CLIENT_PORT: 2181
+      ZOOKEEPER_TICK_TIME: 2000
+
+  broker:
+    image: azapps/cp-kafka:latest
+    hostname: broker
+    container_name: broker
+    depends_on:
+      - zookeeper
+    ports:
+      - "9092:9092"
+      - "29092:29092"
+      - "9555:5555"
+      - "9999:9999"
+    environment:
+      KAFKA_BROKER_ID: 1
+      KAFKA_ZOOKEEPER_CONNECT: 'zookeeper:2181'
+      KAFKA_LISTENER_SECURITY_PROTOCOL_MAP: PLAINTEXT:PLAINTEXT,PLAINTEXT_HOST:PLAINTEXT
+      KAFKA_ADVERTISED_LISTENERS: PLAINTEXT://broker:9092,PLAINTEXT_HOST://localhost:29092
+      KAFKA_OFFSETS_TOPIC_REPLICATION_FACTOR: 1
+      KAFKA_GROUP_INITIAL_REBALANCE_DELAY_MS: 0
+      CONFLUENT_METRICS_ENABLE: 'false'
+      JMX_PORT: 9999
+
+  # Megacard Producer
+  megacard-producer:
+    image: "azapps/kafka-bank-showcase-megacard-connector:latest"
+    user: "node"
+    working_dir: /usr/local/app
+    volumes:
+      - ./megacard-connector/src/:/usr/local/app/src
+    ports:
+      - "8082:8080"
+    command: "/bin/bash -c 'sleep 45 && node_modules/.bin/wait-for-kafka && npm run build:live'"
+    depends_on:
+      - broker
+    environment:
+      KAFKA_BOOTSTRAP_SERVERS: "broker:9092"
+      ZOOKEEPER_URL: "zookeeper:2181"
+      DEBUG: "showcase:*"
+      KAFKA_BOOTSTRAP_SERVERS: "broker:9092"
+      ENSURE_KAFKA_TOPICS: '[{"topic": "megacard_raw_log", "partitions": 10, "replicationFactor": 1}]'
+      MEGACARD_RAW_LOG: megacard_raw_log
+
+  # Megacard Transformer
+  megacard-transformer:
+    image: "azapps/kafka-bank-showcase-megacard-connector:latest"
+    user: "node"
+    working_dir: /usr/local/app
+    volumes:
+      - ./megacard-connector/src/:/usr/local/app/src
+    command: "/bin/bash -c 'sleep 45 && node_modules/.bin/wait-for-kafka && npm run transform:live'"
+    ports:
+      - "8090:8080"
+    depends_on:
+      - broker
+    environment:
+      KAFKA_BOOTSTRAP_SERVERS: "broker:9092"
+      DEBUG: "showcase:*"
+      WAIT_FOR_KAFKA_TOPICS: "megacard_raw_log"
+      ENSURE_KAFKA_TOPICS: '[{"topic": "cards_log", "partitions": 10, "replicationFactor": 1},{"topic": "transactions_log", "partitions": 10, "replicationFactor": 1}]'
+      CARDS_LOG: cards_log
+      TRANSACTIONS_LOG: transactions_log
+      MEGACARD_RAW_LOG: megacard_raw_log
+
+
+# Transactions Service
+
+  transactions-db:
+    image: "postgres:latest"
+    volumes:
+      - ./transactions-svc/db/data:/var/lib/postgresql/data
+
+  transactions-connector:
+    depends_on:
+      - transactions-db
+      - broker
+    image: "azapps/kafka-bank-showcase-transactions-svc-connector:latest"
+    user: "node"
+    working_dir: /usr/local/app
+    volumes:
+      - ./transactions-svc/connector/db/:/usr/local/app/db
+      - ./transactions-svc/connector/src/:/usr/local/app/src
+    command: "/bin/sh -c 'sleep 45 && node_modules/.bin/wait-for-kafka && node_modules/.bin/wait-for-pg-db && npm run build:live'"
+    environment:
+      DEBUG: "showcase:*"
+      PGUSER: postgres
+      PGHOST: transactions-db
+      KAFKA_BOOTSTRAP_SERVERS: "broker:9092"
+      WAIT_FOR_KAFKA_TOPICS: "transactions_log"
+      TRANSACTIONS_LOG: transactions_log
+      RUN_SQL_AFTER_CONNECT: "./db/01-createdb.sql"
+
+  transactions-web:
+    depends_on:
+      - transactions-db
+    image: "azapps/kafka-bank-showcase-transactions-svc-web:latest"
+    user: "node"
+    working_dir: /usr/local/app
+    volumes:
+      - ./transactions-svc/web/src/:/usr/local/app/src
+    ports:
+      - "8084:8080"
+    command: "/bin/sh -c 'node_modules/.bin/wait-for-pg-db && npm run build:live'"
+    environment:
+      DEBUG: "showcase:*"
+      PGUSER: postgres
+      PGHOST: transactions-db
+
+  # Cards Service
+
+  cards-db:
+    image: "postgres:latest"
+    volumes:
+      - ./cards-svc/db/data:/var/lib/postgresql/data
+
+  cards-connector:
+    depends_on:
+      - cards-db
+      - broker
+    image: "azapps/kafka-bank-showcase-cards-svc-connector:latest"
+    user: "node"
+    working_dir: /usr/local/app
+    volumes:
+      - ./cards-svc/connector/db/:/usr/local/app/db
+      - ./cards-svc/connector/src/:/usr/local/app/src
+    command: "/bin/sh -c 'sleep 45 && node_modules/.bin/wait-for-kafka && node_modules/.bin/wait-for-pg-db && npm run build:live'"
+    environment:
+      DEBUG: "showcase:*"
+      PGUSER: postgres
+      PGHOST: cards-db
+      KAFKA_BOOTSTRAP_SERVERS: "broker:9092"
+      WAIT_FOR_KAFKA_TOPICS: "cards_log"
+      CARDS_LOG: cards_log
+      TRANSACTIONS_LOG: transactions_log
+      RUN_SQL_AFTER_CONNECT: "./db/01-createdb.sql"
+
+  cards-web:
+    depends_on:
+      - cards-db
+    image: "azapps/kafka-bank-showcase-cards-svc-web:latest"
+    user: "node"
+    working_dir: /usr/local/app
+    volumes:
+      - ./cards-svc/web/src/:/usr/local/app/src
+    ports:
+      - "8083:8080"
+    command: "/bin/sh -c 'node_modules/.bin/wait-for-pg-db && npm run build:live'"
+    environment:
+      DEBUG: "showcase:*"
+      PGUSER: postgres
+      PGHOST: cards-db

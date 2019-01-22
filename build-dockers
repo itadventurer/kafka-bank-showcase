@@ -1,0 +1,39 @@
+#!/bin/bash
+set -e
+
+BASEPATH=`pwd`
+
+if [[ -z "$DOCKERHUB_USERNAME" ]] ; then
+    echo 'No $DOCKERHUB_USERNAME set!'
+    exit 1
+fi
+
+# Megacard producer & transformer
+cd "$BASEPATH"/megacard-connector/
+TAG=$DOCKERHUB_USERNAME/kafka-bank-showcase-megacard-connector
+docker build -t $TAG .
+docker push $TAG:latest
+
+# Cards Connector
+cd "$BASEPATH"/cards-svc/connector
+TAG=$DOCKERHUB_USERNAME/kafka-bank-showcase-cards-svc-connector
+docker build -t $TAG .
+docker push $TAG:latest
+
+# Cards Web
+cd "$BASEPATH"/cards-svc/web
+TAG=$DOCKERHUB_USERNAME/kafka-bank-showcase-cards-svc-web
+docker build -t $TAG .
+docker push $TAG:latest
+
+# Transactions Connector
+cd "$BASEPATH"/transactions-svc/connector
+TAG=$DOCKERHUB_USERNAME/kafka-bank-showcase-transactions-svc-connector
+docker build -t $TAG .
+docker push $TAG:latest
+
+# Transactions Web
+cd "$BASEPATH"/transactions-svc/web
+TAG=$DOCKERHUB_USERNAME/kafka-bank-showcase-transactions-svc-web
+docker build -t $TAG .
+docker push $TAG:latest
