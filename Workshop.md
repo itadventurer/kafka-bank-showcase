@@ -152,7 +152,7 @@ Open the following files in the IDE and start coding:
 * `./cards-svc/connector/src/index.ts`
 * `./cards-svc/web/src/index.ts`
 
-**Tipps**:
+# Tipps
 
 * The services are configured s.t. they reload the code whenever the
   file changes. Just save the file and reload the page.
@@ -169,3 +169,14 @@ Open the following files in the IDE and start coding:
   git checkout master [FILENAME]
   ```
 **Happy Hacking!**
+
+**TMUX Cheatsheat**:
+
+* [Cheatsheet](https://gist.github.com/henrik/1967800)
+* `Ctrl + B C`: Create new terminal
+* `Ctrl + B l`: Switch to last terminal
+* `Ctrl + B [TERMINAL-NUMBER]`: Switch to terminal with that number
+* Split windows
+  * `Ctrl + B %`: Split terminal horizontally
+  * `Ctrl + B "`: Split terminal vertically
+  * `Ctrl + B o`: Swap between splitted terminals
