@@ -5,7 +5,7 @@ import kafka_utils from './kafka_utils';
 // Web Server
 import express from 'express';
 
-kafka_utils.create_producer(process.env.KAFKA_URL, 'random').then(producer => {
+function start_web_app(producer) {
     const app = express();
 
     // Simple Endpoint
@@ -32,4 +32,6 @@ kafka_utils.create_producer(process.env.KAFKA_URL, 'random').then(producer => {
 
     app.listen(8080, () => console.log('Example app listening on port 8080!'))
 
-});
+}
+
+kafka_utils.create_producer(process.env.KAFKA_URL, 'random').then(start_web_app);
