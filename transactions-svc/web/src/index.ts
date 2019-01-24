@@ -6,10 +6,15 @@ const app = express()
 const pg_client = new Client()
 
 app.get('/', async (req, res) => {
-    const data = await pg_client.query("select transaction_timestamp::date as date, count(*) as num_transactions, avg(amount) as avg_amount, sum(amount) as sum_amount from transactions group by transaction_timestamp::date order by transaction_timestamp::date;");
-    res.send(
-        "<h1>Transactions</h1>" +
-        tableify(data.rows));
+    // TODO: Think about a SQL query to group the transaction by date and show the total amount for that day.
+    //
+    // Tipp: take a look into ../../connector/db/01-createdb.sql for fields you could query
+
+    res.send('Not implemented');
+    //const data = await pg_client.query("…");
+    //res.send(
+    //    "<h1>Transactions</h1>" +
+    //    tableify(data.rows));
 });
 
 async function init() {

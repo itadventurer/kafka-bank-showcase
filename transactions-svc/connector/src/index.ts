@@ -12,16 +12,13 @@ async function consume_event(pg_client, event) {
     try {
         switch(event.event) {
         case "transaction":
-            const insert_query = squel.insert()
-                .into('transactions')
-                .setFields({cardid: event.cardid,
-                            transaction_timestamp: event.timestamp,
-                            has_cvc: payload.has_cvc,
-                            amount: payload.amount,
-                            purpose: payload.purpose,
-                           })
-                .toString();
-            await pg_client.query(insert_query);
+            // TODO: Put the data from the event in the correct form into the database
+            //
+            // Tipps:
+            // * Checkout Squel: https://hiddentao.com/squel/#insert to easily construct the query
+            // * Look into ../db/01-createdb.sql for fields that could match the fields in the event
+            // * Do not forget to send the query using `pg_client.query(query)`
+            console.error('Not implemented');
             break;
         default:
             console.error(event.timestamp, 'Unknown event:', event);
@@ -34,11 +31,12 @@ async function consume_event(pg_client, event) {
 }
 
 async function consume() {
-    const consumer = kafka_utils.create_consumer(process.env.KAFKA_URL, 'transactions_connector', source_topic);
-
     const pg_client = new pg.Client()
     await pg_client.connect()
-    kafka_utils.consume_messages(consumer, event => consume_event(pg_client,event));
-    debug("Started listening on source_topic", source_topic);
+    console.error('Not implemented');
+    // TODO:
+    // 1. Create a consumer
+    // 2. Listen for messages and call consume_event for each received message
+    // 3. Think about the consumer group!
 }
 consume();

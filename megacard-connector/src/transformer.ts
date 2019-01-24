@@ -15,7 +15,15 @@ async function consume_event(producer,event) {
         switch(event.event) {
         case 'transaction':
             debug(`Transaction with card ${event.cardid}. Charged ${event.payload.amount}`);
-            await kafka_utils.produce_msgs(producer, transactions_topic, event, event.cardid);
+            // TODO: Produce the event we just got to the transactions topic
+            //
+            // Tipps:
+            // Relevant variables are:
+            // * producer: the producer object to pass to the kafka_utils function
+            // * transactions_topic: the name of the transactions topic to produce to
+            // * event: the original event we want to produce to the topic
+            // * event.cardid
+            console.error('Not implemented');
             break;
         case 'add_card':
         case 'block_card':
@@ -23,7 +31,8 @@ async function consume_event(producer,event) {
         case 'update_card_limit':
         case 'cancel_cards':
             debug(`card event (${event.event}) of card ${event.cardid}`);
-            await kafka_utils.produce_msgs(producer, cards_topic, event, event.cardid);
+            // TODO: Produce the event we just got to the cards topic
+            console.error('Not implemented');
             break;
         default:
             console.error('Unknown event:', event);
@@ -34,14 +43,16 @@ async function consume_event(producer,event) {
 }
 
 function consume() {
-    kafka_utils.create_producer(process.env.KAFKA_URL, 'cyclic').then(producer => {
-        const consumer = kafka_utils.create_consumer(process.env.KAFKA_URL,
-                                                     'megacard_transformer',
-                                                     source_topic);
-        kafka_utils.consume_messages(consumer, e => consume_event(producer,e));
-        debug("Started listening on source_topic", source_topic);
-    });
-
+    // TODO:
+    // 1. Create a producer as `consume_event` is called with a producer and an event
+    // 2. Create a Kafka consumer
+    // 3. Create a listener that polls Kafka using the consumer and calls the consume_event function
+    //
+    // Tipps:
+    // * Create the producer the same way as in index.ts
+    // * Look in kafka_utils.ts for a function to create a consumer
+    // * Look in kafka_utils.ts for a function to consume messages
+    console.error('Not implemented');
 }
 
 
