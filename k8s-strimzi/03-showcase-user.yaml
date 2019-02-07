@@ -1,0 +1,47 @@
+# Configuration for a Kafka User
+#
+# For more information see https://strimzi.io/docs/latest/#assembly-using-the-user-operator-str
+apiVersion: kafka.strimzi.io/v1alpha1
+kind: KafkaUser
+metadata:
+  name: kafka-showcase
+  namespace: kafka-cluster
+  labels:
+    strimzi.io/cluster: kafka-cluster
+    k8s-copy-secret/target-namespace: kafka-showcase
+    # Comma-separated list of additional secrets to copy
+    k8s-copy-secret/additional-secrets: kafka-cluster-cluster-ca-cert
+spec:
+  authentication:
+    type: tls
+  authorization:
+    type: simple
+    # Access list to what the user is allowed to do. For more
+    # information see
+    # https://strimzi.io/docs/latest/#type-AclRule-reference
+    acls:
+      - resource:
+          type: topic
+          name: kafka-showcase.
+          patternType: prefix
+        operation: Write
+      - resource:
+          type: topic
+          name: kafka-showcase.
+          patternType: prefix
+        operation: Read
+      - resource:
+          type: group
+          name: megacard_transformer
+          patternType: prefix
+        operation: Read
+      - resource:
+          type: group
+          name: transactions_connector
+          patternType: literal
+        operation: Read
+      - resource:
+          type: group
+          name: cards_connector
+          patternType: literal
+        operation: Read

@@ -1,0 +1,59 @@
+# Configuration for a Kafka Topic
+#
+# The topic is created shortly after the deployment of that file. This
+# may take up to two minutes. Unless you configure a KafkaUser you
+# will not be able to access the topic!
+#
+# See https://strimzi.io/docs/latest/#using-the-topic-operator-str for
+# more information
+apiVersion: kafka.strimzi.io/v1alpha1
+kind: KafkaTopic
+metadata:
+  name: kafka-showcase.megacard-raw-log
+  namespace: kafka-cluster
+  labels:
+    strimzi.io/cluster: kafka-cluster
+spec:
+  # Copy from metadata.name!
+  topicName: kafka-showcase.megacard-raw-log
+  # Set the number of partitions.  Think twice about the number!  You
+  # cannot decrease the number of partitions. Increasing partitions
+  # for topics with keys will change how records are partitioned,
+  # which can be particularly problematic when the topic uses semantic
+  # partitioning.  Read more:
+  # https://www.confluent.io/blog/how-choose-number-topics-partitions-kafka-cluster
+  partitions: 10
+  # Replication factor for the topic
+  replicas: 2
+  # Additional topic level configs. See
+  # https://kafka.apache.org/documentation/#topicconfigs for more
+  # information.
+
+  #config:
+  #  retention.ms: 30000
+---
+apiVersion: kafka.strimzi.io/v1alpha1
+kind: KafkaTopic
+metadata:
+  name: kafka-showcase.cards-log
+  namespace: kafka-cluster
+  labels:
+    strimzi.io/cluster: kafka-cluster
+spec:
+  # Copy from metadata.name!
+  topicName: kafka-showcase.cards-log
+  partitions: 10
+  replicas: 2
+---
+apiVersion: kafka.strimzi.io/v1alpha1
+kind: KafkaTopic
+metadata:
+  name: kafka-showcase.transactions-log
+  namespace: kafka-cluster
+  labels:
+    strimzi.io/cluster: kafka-cluster
+spec:
+  # Copy from metadata.name!
+  topicName: kafka-showcase.transactions-log
+  partitions: 10
+  replicas: 2

@@ -1,0 +1,131 @@
+apiVersion: v1
+kind: Service
+metadata:
+  name: healthcheck
+  labels:
+    component: healthcheck
+  namespace: kafka-cluster
+spec:
+  ports:
+  - port: 8080
+    name: web
+  selector:
+    component: healthcheck
+---
+apiVersion: kafka.strimzi.io/v1alpha1
+kind: KafkaTopic
+metadata:
+  name: healthcheck
+  namespace: kafka-cluster
+  labels:
+    strimzi.io/cluster: kafka-cluster
+spec:
+  topicName: healthcheck
+  partitions: 1
+  replicas: 3
+  config:
+    retention.ms: 30000
+---
+apiVersion: kafka.strimzi.io/v1alpha1
+kind: KafkaUser
+metadata:
+  name: healthcheck
+  namespace: kafka-cluster
+  labels:
+    strimzi.io/cluster: kafka-cluster
+spec:
+  authentication:
+    type: tls
+  authorization:
+    type: simple
+    acls:
+      - resource:
+          type: topic
+          name: healthcheck
+          patternType: literal
+        operation: Read
+      - resource:
+          type: topic
+          name: healthcheck
+          patternType: literal
+        operation: Describe
+      - resource:
+          type: topic
+          name: healthcheck
+          patternType: literal
+        operation: Write
+      - resource:
+          type: group
+          name: healthcheck
+          patternType: literal
+        operation: Read
+---
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: healthcheck
+  namespace: kafka-cluster
+  labels:
+    component: healthcheck
+spec:
+  selector:
+    matchLabels:
+      component: healthcheck
+  template:
+    metadata:
+      name: healthcheck
+      labels:
+        component: healthcheck
+      annotations:
+        prometheus.io/scrape: "true"
+        prometheus.io/path: "/metrics"
+        prometheus.io/port: "8080"
+    spec:
+      containers:
+        - name: healthcheck
+          image: 'azapps/kafka-healthcheck:latest'
+          ports:
+            - containerPort: 8080
+#          resources:
+#            requests:
+#              cpu: "10m"
+#              memory: "10Mi"
+#            limits:
+#              cpu: "100m"
+#              memory: "100Mi"
+          env:
+            - name: DEBUG
+              value: "kafka*"
+            - name: HEALTHCHECK_TOPIC
+              value: "healthcheck"
+            - name: HTTP_PORT
+              value: "8080"
+            - name: KAFKA_BOOTSTRAP_SERVERS
+              value: "kafka-cluster-kafka-bootstrap.kafka-cluster.svc:9093"
+            - name: KAFKA_SECURITY_PROTOCOL
+              value: ssl
+            - name: KAFKA_SSL_KEY_LOCATION
+              value: /var/private/ssl/kafka-client-ca-certs/user.key
+            - name: KAFKA_SSL_CERTIFICATE_LOCATION
+              value: /var/private/ssl/kafka-client-ca-certs/user.crt
+            - name: KAFKA_SSL_CA_LOCATION
+              value: /var/private/ssl/kafka-cluster-ca-certs/ca.crt
+          command:
+              - /bin/bash
+              - -c
+              - 'for i in $(set | grep "_SERVICE_\|_PORT" | cut -f1 -d=); do unset $i; done && export HTTP_PORT=8080 && npm start'
+          volumeMounts:
+            - name: client-ca-certs
+              mountPath: "/var/private/ssl/kafka-client-ca-certs"
+              readOnly: true
+            - name: cluster-ca-cert
+              mountPath: "/var/private/ssl/kafka-cluster-ca-certs"
+              readOnly: true
+      volumes:
+        - name: client-ca-certs
+          secret:
+            secretName: healthcheck
+        - name: cluster-ca-cert
+          secret:
+            secretName: kafka-cluster-cluster-ca-cert
+  replicas: 1

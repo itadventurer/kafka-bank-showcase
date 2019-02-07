@@ -1,0 +1,494 @@
+apiVersion: v1
+kind: Service
+metadata:
+  namespace: kafka-showcase
+  name: megacard-producer
+  labels:
+    app: kafka-showcase
+    component: megacard-producer
+spec:
+  ports:
+  - port: 8080
+    name: web
+  selector:
+    app: kafka-showcase
+    component: megacard-producer
+---
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  namespace: kafka-showcase
+  name: megacard-producer
+  labels:
+    app: kafka-showcase
+    component: megacard-producer
+spec:
+  selector:
+    matchLabels:
+      app: kafka-showcase
+      component: megacard-producer
+  replicas: 1
+  template:
+    metadata:
+      name: megacard-producer
+      labels:
+        app: kafka-showcase
+        component: megacard-producer
+    spec:
+      containers:
+        - name: megacard-producer
+          image: 'azapps/kafka-bank-showcase-megacard-connector:latest'
+          ports:
+            - containerPort: 8080
+          command:
+            - npm
+            - start
+          env:
+            - name: KAFKA_BOOTSTRAP_SERVERS
+              value: "kafka-cluster-kafka-bootstrap.kafka-cluster:9093"
+            - name: DEBUG
+              value: "*"
+            - name: CARDS_LOG
+              value: kafka-showcase.cards-log
+            - name: TRANSACTIONS_LOG
+              value: kafka-showcase.transactions-log
+            - name: MEGACARD_RAW_LOG
+              value: kafka-showcase.megacard-raw-log
+            - name: KAFKA_SECURITY_PROTOCOL
+              value: ssl
+            - name: KAFKA_SSL_KEY_LOCATION
+              value: /var/private/ssl/kafka-client-ca-certs/user.key
+            - name: KAFKA_SSL_CERTIFICATE_LOCATION
+              value: /var/private/ssl/kafka-client-ca-certs/user.crt
+            - name: KAFKA_SSL_CA_LOCATION
+              value: /var/private/ssl/kafka-cluster-ca-certs/ca.crt
+          volumeMounts:
+            - name: client-ca-certs
+              mountPath: "/var/private/ssl/kafka-client-ca-certs"
+              readOnly: true
+            - name: cluster-ca-cert
+              mountPath: "/var/private/ssl/kafka-cluster-ca-certs"
+              readOnly: true
+      volumes:
+        - name: client-ca-certs
+          secret:
+            secretName: kafka-showcase
+        - name: cluster-ca-cert
+          secret:
+            secretName: kafka-cluster-cluster-ca-cert
+  replicas: 1
+---
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  namespace: kafka-showcase
+  name: megacard-transformer
+  labels:
+    app: kafka-showcase
+    component: megacard-transformer
+spec:
+  selector:
+    matchLabels:
+      app: kafka-showcase
+      component: megacard-transformer
+  replicas: 1
+  template:
+    metadata:
+      name: megacard-transformer
+      labels:
+        app: kafka-showcase
+        component: megacard-transformer
+    spec:
+      containers:
+        - name: megacard-transformer
+          image: 'azapps/kafka-bank-showcase-megacard-connector:latest'
+          command:
+            - npm
+            - run
+            - transform
+          ports:
+            - containerPort: 8080
+          env:
+            - name: KAFKA_BOOTSTRAP_SERVERS
+              value: "kafka-cluster-kafka-bootstrap.kafka-cluster:9093"
+            - name: DEBUG
+              value: "*"
+            - name: CARDS_LOG
+              value: kafka-showcase.cards-log
+            - name: TRANSACTIONS_LOG
+              value: kafka-showcase.transactions-log
+            - name: MEGACARD_RAW_LOG
+              value: kafka-showcase.megacard-raw-log
+            - name: KAFKA_SECURITY_PROTOCOL
+              value: ssl
+            - name: KAFKA_SSL_KEY_LOCATION
+              value: /var/private/ssl/kafka-client-ca-certs/user.key
+            - name: KAFKA_SSL_CERTIFICATE_LOCATION
+              value: /var/private/ssl/kafka-client-ca-certs/user.crt
+            - name: KAFKA_SSL_CA_LOCATION
+              value: /var/private/ssl/kafka-cluster-ca-certs/ca.crt
+          volumeMounts:
+            - name: client-ca-certs
+              mountPath: "/var/private/ssl/kafka-client-ca-certs"
+              readOnly: true
+            - name: cluster-ca-cert
+              mountPath: "/var/private/ssl/kafka-cluster-ca-certs"
+              readOnly: true
+      volumes:
+        - name: client-ca-certs
+          secret:
+            secretName: kafka-showcase
+        - name: cluster-ca-cert
+          secret:
+            secretName: kafka-cluster-cluster-ca-cert
+  replicas: 1
+---
+apiVersion: v1
+kind: Service
+metadata:
+  namespace: kafka-showcase
+  name: cards-db
+  labels:
+    app: kafka-showcase
+    component: cards-db
+spec:
+  ports:
+  - port: 5432
+    name: psql
+  selector:
+    app: kafka-showcase
+    component: cards-db
+---
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  namespace: kafka-showcase
+  name: cards-db
+  labels:
+    app: kafka-showcase
+    component: cards-db
+spec:
+  selector:
+    matchLabels:
+      app: kafka-showcase
+      component: cards-db
+  replicas: 1
+  template:
+    metadata:
+      name: cards-db
+      labels:
+        app: kafka-showcase
+        component: cards-db
+    spec:
+      containers:
+        - name: cards-db
+          image: postgres:11
+          ports:
+            - containerPort: 5432
+          env:
+            - name: POSTGRES_USER
+              value: cardsdb
+            - name: POSTGRES_PASSWORD
+              value: cardsdb
+            - name: POSTGRES_DATABASE
+              value: cardsdb
+  replicas: 1
+---
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  namespace: kafka-showcase
+  name: cards-connector
+  labels:
+    app: kafka-showcase
+    component: cards-connector
+spec:
+  selector:
+    matchLabels:
+      app: kafka-showcase
+      component: cards-connector
+  replicas: 1
+  template:
+    metadata:
+      name: cards-connector
+      labels:
+        app: kafka-showcase
+        component: cards-connector
+    spec:
+      containers:
+        - name: cards-connector
+          image: 'azapps/kafka-bank-showcase-cards-svc-connector:latest'
+          command:
+          - sh
+          - -c
+          - "node_modules/.bin/wait-for-pg-db && npm start"
+          env:
+            - name: PGUSER
+              value: cardsdb
+            - name: PGHOST
+              value: cards-db
+            - name: PGPASSWORD
+              value: cardsdb
+            - name: DEBUG
+              value: "*"
+            - name: KAFKA_BOOTSTRAP_SERVERS
+              value: "kafka-cluster-kafka-bootstrap.kafka-cluster:9093"
+            - name: RUN_SQL_AFTER_CONNECT
+              value: "./db/01-createdb.sql"
+            - name: CARDS_LOG
+              value: kafka-showcase.cards-log
+            - name: KAFKA_SECURITY_PROTOCOL
+              value: ssl
+            - name: KAFKA_SSL_KEY_LOCATION
+              value: /var/private/ssl/kafka-client-ca-certs/user.key
+            - name: KAFKA_SSL_CERTIFICATE_LOCATION
+              value: /var/private/ssl/kafka-client-ca-certs/user.crt
+            - name: KAFKA_SSL_CA_LOCATION
+              value: /var/private/ssl/kafka-cluster-ca-certs/ca.crt
+          volumeMounts:
+            - name: client-ca-certs
+              mountPath: "/var/private/ssl/kafka-client-ca-certs"
+              readOnly: true
+            - name: cluster-ca-cert
+              mountPath: "/var/private/ssl/kafka-cluster-ca-certs"
+              readOnly: true
+      volumes:
+        - name: client-ca-certs
+          secret:
+            secretName: kafka-showcase
+        - name: cluster-ca-cert
+          secret:
+            secretName: kafka-cluster-cluster-ca-cert
+  replicas: 1
+---
+apiVersion: v1
+kind: Service
+metadata:
+  namespace: kafka-showcase
+  name: cards-web
+  labels:
+    app: kafka-showcase
+    component: cards-web
+spec:
+  ports:
+  - port: 8080
+    name: web
+  selector:
+    app: kafka-showcase
+    component: cards-web
+---
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  namespace: kafka-showcase
+  name: cards-web
+  labels:
+    app: kafka-showcase
+    component: cards-web
+spec:
+  selector:
+    matchLabels:
+      app: kafka-showcase
+      component: cards-web
+  replicas: 1
+  template:
+    metadata:
+      name: cards-web
+      labels:
+        app: kafka-showcase
+        component: cards-web
+    spec:
+      containers:
+        - name: cards-web
+          image: 'azapps/kafka-bank-showcase-cards-svc-web:latest'
+          ports:
+            - containerPort: 8080
+          command:
+          - sh
+          - -c
+          - "node_modules/.bin/wait-for-pg-db && npm start"
+          env:
+            - name: PGUSER
+              value: cardsdb
+            - name: PGHOST
+              value: cards-db
+            - name: PGPASSWORD
+              value: cardsdb
+            - name: DEBUG
+              value: "*"
+  replicas: 1
+---
+apiVersion: v1
+kind: Service
+metadata:
+  namespace: kafka-showcase
+  name: transactions-db
+  labels:
+    app: kafka-showcase
+    component: transactions-db
+spec:
+  ports:
+  - port: 5432
+    name: psql
+  selector:
+    app: kafka-showcase
+    component: transactions-db
+---
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  namespace: kafka-showcase
+  name: transactions-db
+  labels:
+    app: kafka-showcase
+    component: transactions-db
+spec:
+  selector:
+    matchLabels:
+      app: kafka-showcase
+      component: transactions-db
+  replicas: 1
+  template:
+    metadata:
+      name: transactions-db
+      labels:
+        app: kafka-showcase
+        component: transactions-db
+    spec:
+      containers:
+        - name: transactions-db
+          image: postgres:11
+          ports:
+            - containerPort: 5432
+          env:
+            - name: POSTGRES_USER
+              value: transactionsdb
+            - name: POSTGRES_PASSWORD
+              value: transactionsdb
+            - name: POSTGRES_DATABASE
+              value: transactionsdb
+  replicas: 1
+---
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  namespace: kafka-showcase
+  name: transactions-connector
+  labels:
+    app: kafka-showcase
+    component: transactions-connector
+spec:
+  selector:
+    matchLabels:
+      app: kafka-showcase
+      component: transactions-connector
+  replicas: 1
+  template:
+    metadata:
+      name: transactions-connector
+      labels:
+        app: kafka-showcase
+        component: transactions-connector
+    spec:
+      containers:
+        - name: transactions-connector
+          image: 'azapps/kafka-bank-showcase-transactions-svc-connector:latest'
+          command:
+          - sh
+          - -c
+          - "node_modules/.bin/wait-for-pg-db && npm start"
+          env:
+            - name: PGUSER
+              value: transactionsdb
+            - name: PGHOST
+              value: transactions-db
+            - name: PGPASSWORD
+              value: transactionsdb
+            - name: DEBUG
+              value: "*"
+            - name: KAFKA_BOOTSTRAP_SERVERS
+              value: "kafka-cluster-kafka-bootstrap.kafka-cluster:9093"
+            - name: RUN_SQL_AFTER_CONNECT
+              value: "./db/01-createdb.sql"
+            - name: TRANSACTIONS_LOG
+              value: kafka-showcase.transactions-log
+            - name: KAFKA_SECURITY_PROTOCOL
+              value: ssl
+            - name: KAFKA_SSL_KEY_LOCATION
+              value: /var/private/ssl/kafka-client-ca-certs/user.key
+            - name: KAFKA_SSL_CERTIFICATE_LOCATION
+              value: /var/private/ssl/kafka-client-ca-certs/user.crt
+            - name: KAFKA_SSL_CA_LOCATION
+              value: /var/private/ssl/kafka-cluster-ca-certs/ca.crt
+          volumeMounts:
+            - name: client-ca-certs
+              mountPath: "/var/private/ssl/kafka-client-ca-certs"
+              readOnly: true
+            - name: cluster-ca-cert
+              mountPath: "/var/private/ssl/kafka-cluster-ca-certs"
+              readOnly: true
+      volumes:
+        - name: client-ca-certs
+          secret:
+            secretName: kafka-showcase
+        - name: cluster-ca-cert
+          secret:
+            secretName: kafka-cluster-cluster-ca-cert
+  replicas: 1
+---
+apiVersion: v1
+kind: Service
+metadata:
+  namespace: kafka-showcase
+  name: transactions-web
+  labels:
+    app: kafka-showcase
+    component: transactions-web
+spec:
+  ports:
+  - port: 8080
+    name: web
+  selector:
+    app: kafka-showcase
+    component: transactions-web
+---
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  namespace: kafka-showcase
+  name: transactions-web
+  labels:
+    app: kafka-showcase
+    component: transactions-web
+spec:
+  selector:
+    matchLabels:
+      app: kafka-showcase
+      component: transactions-web
+  replicas: 1
+  template:
+    metadata:
+      name: transactions-web
+      labels:
+        app: kafka-showcase
+        component: transactions-web
+    spec:
+      containers:
+        - name: transactions-web
+          image: 'azapps/kafka-bank-showcase-transactions-svc-web:latest'
+          ports:
+            - containerPort: 8080
+          command:
+          - sh
+          - -c
+          - "node_modules/.bin/wait-for-pg-db && npm start"
+          env:
+            - name: PGUSER
+              value: transactionsdb
+            - name: PGHOST
+              value: transactions-db
+            - name: PGPASSWORD
+              value: transactionsdb
+            - name: DEBUG
+              value: "*"
+  replicas: 1

@@ -22,7 +22,10 @@ function start_web_app(producer) {
         const key = events[0].cardid;
         kafka_utils.produce_msgs(producer, megacard_raw_log, events, key)
             .then(() => res.send(events))
-            .catch(err => res.send(err));
+            .catch(err => {
+                console.error(err);
+                res.send(err);
+            });
     });
 
     app.get('/produce_card', (req, res) => {
@@ -30,7 +33,10 @@ function start_web_app(producer) {
         const key = events[0].cardid;
         kafka_utils.produce_msgs(producer, megacard_raw_log, events, key)
             .then(() => res.send(events))
-            .catch(err => res.send(err));
+            .catch(err => {
+                console.error(err);
+                res.send(err);
+            });
     });
 
     app.listen(8080, () => console.log('Example app listening on port 8080!'))
